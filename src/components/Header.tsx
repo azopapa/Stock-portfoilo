@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ViewCurrency } from '../types';
-import { TrendingUp, Plus, Settings, DollarSign, RefreshCw, Clock } from 'lucide-react';
+import { TrendingUp, Plus, Settings, DollarSign, RefreshCw, Clock, LogOut, User } from 'lucide-react';
 
 interface HeaderProps {
   viewCurrency: ViewCurrency;
@@ -11,6 +11,9 @@ interface HeaderProps {
   onRefreshPrices: () => void;
   isRefreshing: boolean;
   lastRateUpdate: Date;
+  user: any;
+  onLogout: () => void;
+  onOpenConfig: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +25,9 @@ export const Header: React.FC<HeaderProps> = ({
   onRefreshPrices,
   isRefreshing,
   lastRateUpdate,
+  user,
+  onLogout,
+  onOpenConfig,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [tempRate, setTempRate] = useState(exchangeRate.toString());
@@ -55,14 +61,17 @@ export const Header: React.FC<HeaderProps> = ({
                 PRO
               </span>
             </h1>
-            <p className="text-xs text-zinc-400">실시간 자산 현황 및 다중 통화 관리</p>
+            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+              {user?.email || '로그인된 사용자'}
+            </p>
           </div>
         </div>
 
         {/* Controls & Actions */}
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Currency Toggle */}
-          <div className="bg-zinc-950 p-1 rounded-xl border border-zinc-800 flex items-center">
+          <div className="hidden sm:flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 items-center">
             <button
               onClick={() => setViewCurrency('KRW')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -93,8 +102,8 @@ export const Header: React.FC<HeaderProps> = ({
               title="환율 설정 및 1시간 주기 자동 갱신 안내"
             >
               <Settings className="w-4 h-4 text-zinc-400" />
-              <span className="hidden md:inline">환율: ₩{exchangeRate.toLocaleString()}</span>
-              <span className="text-[10px] text-emerald-400 flex items-center gap-0.5 ml-1 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/50">
+              <span className="hidden lg:inline">환율: ₩{exchangeRate.toLocaleString()}</span>
+              <span className="text-[10px] text-emerald-400 flex items-center gap-0.5 ml-0.5 bg-emerald-950/60 px-1 py-0.5 rounded border border-emerald-800/50">
                 <Clock className="w-3 h-3" /> 1hr
               </span>
             </button>
@@ -150,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onRefreshPrices}
             disabled={isRefreshing}
-            className="p-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-300 border border-zinc-700 transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
+            className="p-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-300 border border-zinc-700 transition-colors hidden sm:flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
             title="시세 새로고침/변동"
           >
             <RefreshCw className={`w-4 h-4 text-emerald-400 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -160,10 +169,28 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Add Stock Button */}
           <button
             onClick={onOpenAddModal}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-emerald-950/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-950/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Plus className="w-4 h-4" />
-            <span>신규 주식 등록</span>
+            <span className="hidden sm:inline">신규 주식 등록</span>
+            <span className="sm:hidden">등록</span>
+          </button>
+
+          {/* Supabase Config & Logout */}
+          <button
+            onClick={onOpenConfig}
+            className="p-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-300 border border-zinc-700 transition-colors"
+            title="Supabase 설정"
+          >
+            <Settings className="w-4 h-4 text-zinc-400" />
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+            title="로그아웃"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>

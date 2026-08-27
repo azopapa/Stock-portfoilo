@@ -6,13 +6,24 @@ import { SummaryCards } from './components/SummaryCards';
 import { PortfolioChart } from './components/PortfolioChart';
 import { PortfolioTable } from './components/PortfolioTable';
 import { StockModal } from './components/StockModal';
+import { AuthModal } from './components/AuthModal';
+import { SupabaseConfigModal } from './components/SupabaseConfigModal';
 import { DEFAULT_EXCHANGE_RATE } from './utils/formatters';
+import { getSupabaseClient, getStoredSupabaseConfig } from './lib/supabaseClient';
 
 const STORAGE_KEY_STOCKS = 'stock_portfolio_items_v1';
 const STORAGE_KEY_CURRENCY = 'stock_portfolio_currency_v1';
 const STORAGE_KEY_RATE = 'stock_portfolio_exchange_rate_v1';
 
 export default function App() {
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(() => {
+    const cfg = getStoredSupabaseConfig();
+    return Boolean(cfg.url && cfg.anonKey);
+  });
+
   const [stocks, setStocks] = useState<StockItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_STOCKS);
     if (saved) {
@@ -40,6 +51,38 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<StockItem | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Supabase Auth 세션 확인
+  useEffect(() => {
+    const checkSession = async () => {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+        }
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          setUser(session?.user || null);
+        });
+
+        setAuthLoading(false);
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (err) {
+        console.error('Auth session check error', err);
+        setAuthLoading(false);
+      }
+    };
+
+    checkSession();
+  }, [isConfigured]);
 
   // 로컬 스토리지 동기화
   useEffect(() => {
@@ -80,20 +123,25 @@ export default function App() {
       setLastRateUpdate(new Date());
     };
 
-    // 1시간 = 3600 * 1000 ms
     const intervalId = setInterval(fetchLatestExchangeRate, 3600 * 1000);
     return () => clearInterval(intervalId);
   }, []);
 
+  const handleLogout = async () => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setUser(null);
+  };
+
   // 주식 추가 / 수정 저장 핸들러
   const handleSaveStock = (stockData: Omit<StockItem, 'id'> | StockItem) => {
     if ('id' in stockData && stockData.id) {
-      // 수정
       setStocks((prev) =>
         prev.map((item) => (item.id === stockData.id ? (stockData as StockItem) : item))
       );
     } else {
-      // 신규 등록
       const newItem: StockItem = {
         ...(stockData as Omit<StockItem, 'id'>),
         id: Date.now().toString(),
@@ -109,25 +157,21 @@ export default function App() {
     }
   };
 
-  // 수정 모달 오픈
   const handleOpenEdit = (stock: StockItem) => {
     setEditingStock(stock);
     setIsModalOpen(true);
   };
 
-  // 신규 모달 오픈
   const handleOpenAdd = () => {
     setEditingStock(null);
     setIsModalOpen(true);
   };
 
-  // 시세 새로고침/변동 시뮬레이션
   const handleRefreshPrices = () => {
     setIsRefreshing(true);
     setTimeout(() => {
       setStocks((prev) =>
         prev.map((stock) => {
-          // 소폭 변동 시뮬레이션 (-2% ~ +2%)
           const fluctuationPercent = (Math.random() * 4 - 2) / 100;
           const newCurrentPrice = Math.max(1, Math.round((stock.currentPrice * (1 + fluctuationPercent)) * 100) / 100);
           const newDailyRate = Math.round((stock.dailyChangeRate + (fluctuationPercent * 100)) * 100) / 100;
@@ -143,6 +187,26 @@ export default function App() {
     }, 600);
   };
 
+  // 만약 로그인하지 않은 경우 로그인 모달 표시
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans flex items-center justify-center p-4">
+        <AuthModal
+          onSuccess={(loggedInUser) => setUser(loggedInUser)}
+          onOpenConfig={() => setIsConfigModalOpen(true)}
+          isConfigured={isConfigured}
+        />
+        <SupabaseConfigModal
+          isOpen={isConfigModalOpen}
+          onClose={() => setIsConfigModalOpen(false)}
+          onConfigured={() => {
+            setIsConfigured(true);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500 selection:text-white">
       {/* Header */}
@@ -155,6 +219,9 @@ export default function App() {
         onRefreshPrices={handleRefreshPrices}
         isRefreshing={isRefreshing}
         lastRateUpdate={lastRateUpdate}
+        user={user}
+        onLogout={handleLogout}
+        onOpenConfig={() => setIsConfigModalOpen(true)}
       />
 
       {/* Main Content Container */}
@@ -189,6 +256,13 @@ export default function App() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveStock}
         editingStock={editingStock}
+      />
+
+      {/* Supabase Config Modal */}
+      <SupabaseConfigModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        onConfigured={() => setIsConfigured(true)}
       />
     </div>
   );
