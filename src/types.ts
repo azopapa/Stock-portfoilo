@@ -15,4 +15,14 @@ export interface StockItem {
   category: string; // 섹터 (예: 기술, 반도체, 2차전지, 금융 등)
 }
 
+export interface ResearchNote {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  stock_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ViewCurrency = 'KRW' | 'USD';

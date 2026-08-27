@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { SummaryCards } from './components/SummaryCards';
 import { PortfolioChart } from './components/PortfolioChart';
 import { PortfolioTable } from './components/PortfolioTable';
+import { ResearchNotesSection } from './components/ResearchNotesSection';
 import { StockModal } from './components/StockModal';
 import { AuthModal } from './components/AuthModal';
 import { SupabaseConfigModal } from './components/SupabaseConfigModal';
@@ -248,6 +249,9 @@ export default function App() {
           onEditStock={handleOpenEdit}
           onDeleteStock={handleDeleteStock}
         />
+
+        {/* Researcher Notes Section */}
+        <ResearchNotesSection user={user} stocks={stocks} />
       </main>
 
       {/* Add / Edit Stock Modal */}
